@@ -86,6 +86,16 @@ int main(int argc, char** argv) {
         std::cout << ">" << it->name << std::endl
                   << n.data << std::endl;
       }
+    } else {
+      if (!it->quality.empty()) {
+        std::cout << "@" << it->name << std::endl
+                  << it->data << std::endl
+                  << "+" << std::endl
+                  << it->quality << std::endl;
+      } else {
+        std::cout << ">" << it->name << std::endl
+                  << it->data << std::endl;
+      }
     }
   }
 
