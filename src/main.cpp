@@ -62,26 +62,23 @@ int main(int argc, char** argv) {
   std::vector<double> l;
   for (auto& it : s) {
     auto o = me.Map(it, false, false);
-    if (o.empty()) {
-      continue;
-    }
+    if (!o.empty()) {
+      std::sort(o.begin(), o.end(),
+          [] (const biosoup::Overlap& lhs, const biosoup::Overlap& rhs) -> bool {  // NOLINT
+            return lhs.lhs_end - lhs.lhs_begin > rhs.lhs_end - rhs.lhs_begin;
+          });
+      auto b = o.front();
 
-    std::sort(o.begin(), o.end(),
-        [] (const biosoup::Overlap& lhs, const biosoup::Overlap& rhs) -> bool {
-          return lhs.lhs_end - lhs.lhs_begin > rhs.lhs_end - rhs.lhs_begin;
-        });
-    auto b = o.front();
-
-    if (b.lhs_end - b.lhs_begin / static_cast<double>(it->data.size()) > 0.98) {
-      it->data = r[b.rhs_id]->data.substr(b.rhs_begin, b.rhs_end - b.rhs_begin);
-      if (it->quality.size()) {
-        it->quality = std::string(it->data.size(), '^');
-      }
-      if (b.strand) {
-        it->ReverseAndComplement();
+      if (b.lhs_end - b.lhs_begin / static_cast<double>(it->data.size()) > 0.98) {  // NOLINT
+        it->data = r[b.rhs_id]->data.substr(b.rhs_begin, b.rhs_end - b.rhs_begin);  // NOLINT
+        if (it->quality.size()) {
+          it->quality = std::string(it->data.size(), '^');
+        }
+        if (b.strand) {
+          it->ReverseAndComplement();
+        }
       }
     }
-
     if (!it->quality.empty()) {
       std::cout << "@" << it->name << std::endl
                 << it->data << std::endl
