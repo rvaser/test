@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   me.Minimize(r.begin(), r.end());
 
   std::vector<double> l;
-  for (const auto& it : s) {
+  for (auto& it : s) {
     auto o = me.Map(it, false, false);
     if (o.empty()) {
       continue;
@@ -73,29 +73,23 @@ int main(int argc, char** argv) {
     auto b = o.front();
 
     if (b.lhs_end - b.lhs_begin / static_cast<double>(it->data.size()) > 0.98) {
-      auto n = biosoup::Sequence("", r[b.rhs_id]->data.substr(b.rhs_begin, b.rhs_end - b.rhs_begin));  // NOLINT
+      it->data = r[b.rhs_id]->data.substr(b.rhs_begin, b.rhs_end - b.rhs_begin);
+      if (it->quality.size()) {
+        it->quality = std::string(it->data.size(), '^');
+      }
       if (b.strand) {
-        n.ReverseAndComplement();
+        it->ReverseAndComplement();
       }
-      if (!it->quality.empty()) {
-        std::cout << "@" << it->name << std::endl
-                  << n.data << std::endl
-                  << "+" << std::endl
-                  << std::string(n.data.size(), '^') << std::endl;
-      } else {
-        std::cout << ">" << it->name << std::endl
-                  << n.data << std::endl;
-      }
+    }
+
+    if (!it->quality.empty()) {
+      std::cout << "@" << it->name << std::endl
+                << it->data << std::endl
+                << "+" << std::endl
+                << it->quality << std::endl;
     } else {
-      if (!it->quality.empty()) {
-        std::cout << "@" << it->name << std::endl
-                  << it->data << std::endl
-                  << "+" << std::endl
-                  << it->quality << std::endl;
-      } else {
-        std::cout << ">" << it->name << std::endl
-                  << it->data << std::endl;
-      }
+      std::cout << ">" << it->name << std::endl
+                << it->data << std::endl;
     }
   }
 
