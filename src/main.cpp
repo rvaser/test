@@ -5,6 +5,7 @@
 #include "bioparser/fasta_parser.hpp"
 #include "bioparser/fastq_parser.hpp"
 #include "ram/minimizer_engine.hpp"
+#include "thread_pool/thread_pool.hpp"
 
 std::atomic<std::uint32_t> biosoup::Sequence::num_objects{0};
 
@@ -56,29 +57,39 @@ int main(int argc, char** argv) {
   auto sp = CreateParser(argv[2]);
   auto s = sp->Parse(-1);
 
-  auto me = ram::MinimizerEngine();
+  auto tp =  std::make_shared<thread_pool::ThreadPool>(12);
+
+  auto me = ram::MinimizerEngine(15, 5, 500, 4, 100, 10000, tp);
   me.Minimize(r.begin(), r.end());
 
   std::vector<double> l;
+  std::vector<std::future<void>> f;
   for (auto& it : s) {
-    auto o = me.Map(it, false, false);
-    if (!o.empty()) {
-      std::sort(o.begin(), o.end(),
-          [] (const biosoup::Overlap& lhs, const biosoup::Overlap& rhs) -> bool {  // NOLINT
-            return lhs.lhs_end - lhs.lhs_begin > rhs.lhs_end - rhs.lhs_begin;
-          });
-      auto b = o.front();
+    f.emplace_back(tp->Submit(
+        [&] (decltype(it) jt) -> void {
+          auto o = me.Map(jt, false, false);
+          if (!o.empty()) {
+            std::sort(o.begin(), o.end(),
+                [] (const biosoup::Overlap& lhs, const biosoup::Overlap& rhs) -> bool {  // NOLINT
+                  return lhs.lhs_end - lhs.lhs_begin > rhs.lhs_end - rhs.lhs_begin;  // NOLINT
+                });
+            auto b = o.front();
 
-      if (b.lhs_end - b.lhs_begin / static_cast<double>(it->data.size()) > 0.98) {  // NOLINT
-        it->data = r[b.rhs_id]->data.substr(b.rhs_begin, b.rhs_end - b.rhs_begin);  // NOLINT
-        if (it->quality.size()) {
-          it->quality = std::string(it->data.size(), '^');
-        }
-        if (b.strand) {
-          it->ReverseAndComplement();
-        }
-      }
-    }
+            if (b.lhs_end - b.lhs_begin / static_cast<double>(jt->data.size()) > 0.98) {  // NOLINT
+              jt->data = r[b.rhs_id]->data.substr(b.rhs_begin, b.rhs_end - b.rhs_begin);  // NOLINT
+              if (jt->quality.size()) {
+                jt->quality = std::string(jt->data.size(), '^');
+              }
+              if (b.strand) {
+                jt->ReverseAndComplement();
+              }
+            }
+          }
+        }, std::ref(it)));
+  }
+  for (std::uint32_t i = 0; i < f.size(); ++i) {
+    f[i].wait();
+    auto& it = s[i];
     if (!it->quality.empty()) {
       std::cout << "@" << it->name << std::endl
                 << it->data << std::endl
