@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
 
-project(test VERSION 0.0.2
+project(test VERSION 0.0.3
              LANGUAGES CXX
              DESCRIPTION "Test.")
 

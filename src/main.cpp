@@ -60,90 +60,95 @@ int main(int argc, char** argv) {
   if (sp == nullptr) {
     return 1;
   }
-  auto s = sp->Parse(-1);
 
   auto tp = std::make_shared<thread_pool::ThreadPool>();
 
   auto me = ram::MinimizerEngine(tp);
   me.Minimize(r.begin(), r.end());
 
-  std::vector<double> l;
-  std::vector<std::future<void>> f;
-  for (auto& it : s) {
-    f.emplace_back(tp->Submit(
-        [&] (decltype(it) jt) -> void {
-          if (jt->inflated_len < 1000) {
-            jt.reset();
-            return;
-          }
+  while (true) {
+    auto s = sp->Parse(1ULL << 32);
+    if (s.empty()) {
+      break;
+    }
 
-          auto o = me.Map(jt, false, false);
-          if (o.empty()) {
-            jt.reset();
-            return;
-          }
+    std::vector<std::future<void>> f;
+    for (auto& it : s) {
+      f.emplace_back(tp->Submit(
+          [&] (decltype(it) jt) -> void {
+            if (jt->inflated_len < 1000) {
+              jt.reset();
+              return;
+            }
 
-          // remove duplications
-          std::sort(o.begin(), o.end(),
-              [] (const biosoup::Overlap& lhs,
-                  const biosoup::Overlap& rhs) -> bool {
-                return lhs.lhs_end - lhs.lhs_begin >
-                       rhs.lhs_end - rhs.lhs_begin;
-              });
-          while (true) {
-            bool ic = 0;
-            for (std::uint32_t i = 1; i < o.size(); ++i) {
-              for (std::uint32_t j = 0; j < i; ++j) {
-                if (o[j].lhs_begin <= o[i].lhs_begin && o[i].lhs_end <= o[j].lhs_end) {  // NOLINT
-                  o.erase(o.begin() + i);
-                  ic = 1;
+            auto o = me.Map(jt, false, false);
+            if (o.empty()) {
+              jt.reset();
+              return;
+            }
+
+            // remove duplications
+            std::sort(o.begin(), o.end(),
+                [] (const biosoup::Overlap& lhs,
+                    const biosoup::Overlap& rhs) -> bool {
+                  return lhs.lhs_end - lhs.lhs_begin >
+                         rhs.lhs_end - rhs.lhs_begin;
+                });
+            while (true) {
+              bool ic = 0;
+              for (std::uint32_t i = 1; i < o.size(); ++i) {
+                for (std::uint32_t j = 0; j < i; ++j) {
+                  if (o[j].lhs_begin <= o[i].lhs_begin && o[i].lhs_end <= o[j].lhs_end) {  // NOLINT
+                    o.erase(o.begin() + i);
+                    ic = 1;
+                    break;
+                  }
+                }
+                if (ic) {
                   break;
                 }
               }
-              if (ic) {
+              if (!ic) {
                 break;
               }
             }
-            if (!ic) {
-              break;
-            }
-          }
 
-          // combine
-          std::sort(o.begin(), o.end(),
-              [] (const biosoup::Overlap& lhs,
-                  const biosoup::Overlap& rhs) -> bool {
-                return lhs.lhs_begin <  rhs.lhs_begin;
-              });
-          std::string d = "";
-          for (const auto& it : o) {
-            biosoup::NucleicAcid na(
-                "",
-                r[it.rhs_id]->InflateData(
-                    it.rhs_begin,
-                    it.rhs_end - it.rhs_begin));
-            if (it.strand == 0) {
-              na.ReverseAndComplement();
+            // combine
+            std::sort(o.begin(), o.end(),
+                [] (const biosoup::Overlap& lhs,
+                    const biosoup::Overlap& rhs) -> bool {
+                  return lhs.lhs_begin <  rhs.lhs_begin;
+                });
+            std::string d = "";
+            for (const auto& it : o) {
+              biosoup::NucleicAcid na(
+                  "",
+                  r[it.rhs_id]->InflateData(
+                      it.rhs_begin,
+                      it.rhs_end - it.rhs_begin));
+              if (it.strand == 0) {
+                na.ReverseAndComplement();
+              }
+              d += na.InflateData();
+              if (d.size() > 0.98 * jt->inflated_len) {
+                break;
+              }
             }
-            d += na.InflateData();
-            if (d.size() > 0.98 * jt->inflated_len) {
-              break;
-            }
-          }
 
-          jt = std::unique_ptr<biosoup::NucleicAcid>(
-              new biosoup::NucleicAcid(jt->name, d));
-        },
-        std::ref(it)));
-  }
-  for (const auto& it : f) {
-    it.wait();
-  }
+            jt = std::unique_ptr<biosoup::NucleicAcid>(
+                new biosoup::NucleicAcid(jt->name, d));
+          },
+          std::ref(it)));
+    }
+    for (const auto& it : f) {
+      it.wait();
+    }
 
-  for (const auto& it : s) {
-    if (it) {
-      std::cout << ">" << it->name << std::endl
-                << it->InflateData() << std::endl;
+    for (const auto& it : s) {
+      if (it) {
+        std::cout << ">" << it->name << std::endl
+                  << it->InflateData() << std::endl;
+      }
     }
   }
 
