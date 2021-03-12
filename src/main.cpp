@@ -65,6 +65,7 @@ int main(int argc, char** argv) {
 
   auto me = ram::MinimizerEngine(tp);
   me.Minimize(r.begin(), r.end());
+  me.Filter(0.001);
 
   while (true) {
     auto s = sp->Parse(1ULL << 32);
