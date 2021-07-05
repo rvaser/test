@@ -10,10 +10,13 @@ jobs:
     strategy:
       matrix:
         os: 
-          - ubuntu-latest
+          - ubuntu-18.04
           - macos-latest
         compiler:
           - [gcc, g++]
+          - [gcc-4.8, g++-4.8]
+          - [clang, clang++]
+          - [clang-4.0, clang++-4.0]
 
     runs-on: ${{ matrix.os }}
 
