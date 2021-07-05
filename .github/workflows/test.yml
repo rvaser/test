@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - if: ${{ matrix.compiler[0] == 'g++-4.8' }}
+      - if: ${{ matrix.compiler == 'g++-4.8' }}
         name: Setup GCC
         uses: egor-tensin/setup-gcc@v1
         with:
