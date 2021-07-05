@@ -14,9 +14,7 @@ jobs:
           - macos-latest
         compiler:
           - gcc
-          - gcc-4.8
           - clang
-          - clang-4.0
 
     runs-on: ${{ matrix.os }}
 
