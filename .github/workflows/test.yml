@@ -1,4 +1,4 @@
-name: test
+name: test CI
 
 on:
   push:
@@ -10,11 +10,12 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         compiler:
           - g++
+          - g++-4.8
           - clang++
 
     runs-on: ubuntu-18.04
@@ -22,13 +23,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - if: ${{ matrix.compiler == 'g++-4.8' }}
+        name: Setup GCC
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: 4.8
+          platform: x64
+
       - name: Configure CMake
         run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
         env:
           CXX: ${{ matrix.compiler }}
 
       - name: Build
-        run: cmake --build ${{ github.workspace }}/build
+        run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }}
 
       - name: Test
         working-directory: ${{ github.workspace }}/build
