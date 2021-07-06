@@ -17,7 +17,7 @@ jobs:
           - g++
           - g++-4.8
           - clang++
-          - clang++-4.0
+          - clang++-5.0
 
     runs-on: ubuntu-18.04
 
@@ -31,11 +31,12 @@ jobs:
           version: 4.8
           platform: x64
 
-      - if: ${{ matrix.compiler == 'clang++-4.0' }}
+      - if: ${{ matrix.compiler == 'clang++-5.0' }}
         name: Setup Clang
-        uses: KyleMayes/install-llvm-action@v1
+        uses: egor-tensin/setup-clang@v1
         with:
-          version: 4.0
+          version: 5.0
+          platform: x64
 
       - name: Configure CMake
         run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
