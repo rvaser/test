@@ -17,7 +17,7 @@ jobs:
           - g++
           - g++-4.8
           - clang++
-          - clang++-5.0
+          - clang++-4.0
 
     runs-on: ubuntu-18.04
 
@@ -31,11 +31,11 @@ jobs:
           version: 4.8
           platform: x64
 
-      - if: ${{ matrix.compiler == 'clang++-5.0' }}
+      - if: ${{ matrix.compiler == 'clang++-4.0' }}
         name: Setup Clang
-        uses: egor-tensin/setup-clang@v1
+        uses: egor-tensin/setup-clang@v1.1
         with:
-          version: 5.0
+          version: 4.0
           platform: x64
 
       - name: Configure CMake
